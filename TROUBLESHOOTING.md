@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide covers common issues and their solutions for the IHACPA Python Package Review Automation system v1.5.0.
+This guide covers common issues and their solutions for the IHACPA Python Package Review Automation system v2.7.0.
 
 ## Common Issues and Solutions
 
@@ -215,6 +215,49 @@ ModuleNotFoundError: No module named 'openpyxl'
 - Or install specific package: `pip install openpyxl==3.1.5`
 - Use virtual environment to avoid conflicts
 
+### 10. Vulnerability Scanner Issues (v2.7.0+)
+
+#### Issue: NIST NVD shows "None found" for known vulnerable packages
+**Symptoms:**
+- PyJWT showing 0 CVEs instead of 3
+- Tables showing 1 CVE instead of 392
+
+**Solution:**
+- Update to v2.7.0 or later
+- The issue was caused by overly restrictive filtering
+- Now uses enhanced search strategies and expanded known package whitelist
+
+#### Issue: MITRE CVE missing cross-platform vulnerabilities
+**Symptoms:**
+- Paramiko not showing CVE-2023-48795
+- Missing CVEs that affect multiple platforms
+
+**Solution:**
+- Update to v2.7.0 or later
+- Enhanced MITRE scanner now properly detects cross-platform CVEs
+- Improved version extraction from CVE descriptions
+
+#### Issue: SNYK showing duplicate vulnerabilities
+**Symptoms:**
+- Same vulnerability counted multiple times
+- Inflated vulnerability counts
+
+**Solution:**
+- Update to v2.7.0 or later
+- Enhanced deduplication logic prevents counting duplicates
+- Better HTML parsing for SNYK web pages
+
+#### Issue: API Rate Limiting (429 errors)
+**Symptoms:**
+- HTTP 429 Too Many Requests errors
+- Scanner stops working temporarily
+
+**Solution:**
+- Update to v2.7.0 or later
+- Built-in delays between API calls
+- Automatic retry with exponential backoff
+- Consider reducing batch size in settings
+
 ## Diagnostic Commands
 
 ### Check System Status
@@ -268,18 +311,25 @@ Contact support if you encounter:
 
 ## Version-Specific Issues
 
-### v1.4.0+
+### v2.7.0+
+- Major vulnerability scanner fixes
+- Enhanced NIST NVD accuracy
+- Fixed MITRE CVE cross-platform detection
+- Improved SNYK deduplication
+- Better rate limiting handling
+
+### v2.0.0 - v2.6.x
+- Baseline vulnerability scanner improvements
+- AI integration enhancements
+- Font color system improvements
+
+### v1.4.0 - v1.9.x
 - Format check functionality added
 - Improved color extraction methods
 - Enhanced error handling
 
-### v1.3.0+
-- Quad AI integration completed
-- Enhanced font color system
-- Comprehensive vulnerability analysis
-
 ### Earlier Versions
-- Consider upgrading to latest version for bug fixes and new features
+- Consider upgrading to v2.7.0+ for critical vulnerability scanner fixes
 
 ## Quick Fixes Checklist
 

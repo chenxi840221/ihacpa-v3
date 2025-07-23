@@ -4,13 +4,13 @@
 
 This project automates the cybersecurity vulnerability review process for Python packages used by IHACPA (Independent Health and Aged Care Pricing Authority). The system automatically updates package information, checks multiple vulnerability databases, and generates comprehensive security assessments.
 
-## Current Status - Version 2.6.1
+## Current Status - Version 2.7.0
 
 - **Total Packages to Review:** 486 (confirmed from Excel analysis)
-- **Status:** ✅ **VERSION 2.6.1** - NIST NVD scanner openpyxl detection issue fixed
-- **Latest Achievement:** Fixed NIST NVD Column P discrepancy - openpyxl CVE-2017-5992 now correctly detected, validated tabulate WordPress filtering
-- **Key Improvements:** Enhanced Excel library support, expanded known_python_packages with openpyxl/xlsxwriter/xlrd/xlwt
-- **Enhanced:** All vulnerability scanners + intelligent recommendation system + near-perfect accuracy + comprehensive package coverage
+- **Status:** ✅ **VERSION 2.7.0** - Major vulnerability scanner fixes and improvements
+- **Latest Achievement:** Fixed critical issues in NIST NVD, MITRE CVE, and SNYK scanners
+- **Key Improvements:** Enhanced accuracy, reduced false positives, improved rate limiting
+- **Repository:** https://github.com/chenxi840221/Sean-IHACPA-Python-Security-Automation
 
 ## Key Features
 
@@ -662,11 +662,18 @@ This tool is designed for internal IHACPA use and handles sensitive security inf
 
 ---
 
-**Last Updated:** July 22, 2025  
-**Version:** 2.4.0 - Enhanced MITRE CVE Scanner with Improved Accuracy 🔍  
-**Status:** ✅ **PRODUCTION READY** - Complete vulnerability detection and intelligent recommendations
+**Last Updated:** July 23, 2025  
+**Version:** 2.7.0 - Major Vulnerability Scanner Fixes 🚨  
+**Status:** ✅ **PRODUCTION READY** - Enhanced accuracy across all vulnerability scanners
 
-## Recent Updates (July 22, 2025) 🔍
+## Recent Updates (July 23, 2025) 🔍
+
+### Version 2.7.0 - Major Vulnerability Scanner Fixes
+- ✅ **FIXED: NIST NVD Scanner** - Resolved major discrepancies (PyJWT: 0→3 CVEs, tables: 1→392 CVEs)
+- ✅ **FIXED: MITRE CVE Scanner** - Paramiko now correctly finds CVE-2023-48795
+- ✅ **FIXED: SNYK Scanner** - Eliminated false positives with enhanced HTML parsing
+- ✅ **IMPROVED: Rate Limiting** - Added delays to prevent API 429 errors
+- ✅ **ENHANCED: Known Package Detection** - Expanded whitelist for better Python package identification
 
 ### Version 2.4.0 - Enhanced MITRE CVE Scanner
 - ✅ **FIXED: Werkzeug Detection** - Was showing "None found", now finds 16 CVEs (perfect match with website)

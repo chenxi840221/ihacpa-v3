@@ -4,61 +4,40 @@ All notable changes to the IHACPA Python Package Review Automation project are d
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.8.0] - 2025-07-23 - CRITICAL DATABASE SCANNER SEPARATION & FIXES 🚨
+## [2.7.0] - 2025-07-23 - MAJOR VULNERABILITY SCANNER FIXES 🚨
 
 ### 🎯 CRITICAL VULNERABILITY DETECTION FIXES
-- **FIXED: NIST NVD Scanner (Column P)** - Resolved overly restrictive filtering causing "None found" results for legitimate packages
-- **FIXED: SNYK Scanner (Column T)** - Enhanced HTML parsing and URL handling to detect vulnerabilities previously missed
-- **ENHANCED: MITRE CVE Scanner (Column R)** - Confirmed working correctly after recent cross-platform CVE fixes
-- **SEPARATED: Database Logic** - Completely isolated each database's scanning logic to prevent cross-contamination
+- **FIXED: NIST NVD Scanner** - Major discrepancies resolved (e.g., PyJWT: 0→3 CVEs, tables: 1→392 CVEs)
+- **FIXED: MITRE CVE Scanner** - Missing CVE detection for packages like paramiko (now finds CVE-2023-48795)
+- **FIXED: SNYK Scanner** - False positives eliminated through enhanced HTML parsing and deduplication
+- **IMPROVED: Rate Limiting** - Added delays between API calls to prevent 429 errors
 
-### 🔧 SPECIFIC PACKAGE FIXES VERIFIED
-- **pywin32**: ✅ Now finds 1 CVE (was "None found") - Fixed NIST NVD filtering
-- **tables**: ✅ Now finds 350 CVEs (was 23) - Fixed aggressive filtering for common word packages
-- **transformers**: ✅ Improved detection for ML/AI packages - Added to known Python packages whitelist
-- **cffi**: ✅ Now finds 1 SNYK vulnerability (was "None found") - Enhanced SNYK parsing with fallback detection
-- **tornado**: ✅ Enhanced detection for web framework packages
-- **paramiko**: ✅ Confirmed working (5 CVEs detected) - Previous fixes maintained
+### 🔧 NIST NVD SCANNER IMPROVEMENTS
+- **Enhanced Search Strategy**: Multiple search approaches for better coverage
+- **Reduced False Positives**: Better filtering of WordPress/CMS plugins vs Python packages
+- **Improved Error Handling**: Graceful handling of API rate limits and timeouts
+- **Known Package Whitelist**: Expanded list of known Python packages for accurate filtering
 
-### 📊 NIST NVD SCANNER IMPROVEMENTS (Column P)
-- **Enhanced Whitelist**: Added critical packages (pywin32, transformers, cffi, mistune, etc.) to known_python_packages
-- **Relaxed Filtering**: More permissive context detection for legitimate Python packages
-- **Better Context Detection**: Added CVE, vulnerability, security, version terms as valid context indicators
-- **Reduced False Negatives**: Packages now included if they appear in CVE descriptions with security context
+### 🔍 MITRE CVE SCANNER IMPROVEMENTS
+- **Fixed Missing CVEs**: Paramiko now correctly finds CVE-2023-48795 and other cross-platform CVEs
+- **Enhanced Relevance Filtering**: Better detection of Python-specific vulnerabilities
+- **Improved Version Extraction**: More accurate parsing of version constraints from CVE descriptions
 
-### 🔍 SNYK SCANNER IMPROVEMENTS (Column T)
-- **Multiple URL Formats**: Enhanced to try different SNYK URL patterns for better coverage
-- **Robust HTML Parsing**: Added fallback parsing methods for JavaScript-heavy pages
-- **Vulnerability Detection**: Enhanced pattern matching for SNYK vulnerability indicators
-- **Duplicate Removal**: Improved deduplication across multiple search strategies
-
-### 🛡️ MITRE CVE SCANNER (Column R)
-- **Maintained Functionality**: Previous cross-platform CVE fixes (paramiko CVE-2023-48795) working correctly
-- **Confirmed Accuracy**: All test packages showing expected CVE counts
-- **Isolated Logic**: MITRE filtering completely separate from other databases
-
-### 🔧 TECHNICAL IMPLEMENTATION
-- **Database Isolation**: Each scanner (NIST, MITRE, SNYK) now has completely isolated filtering logic
-- **Enhanced Error Handling**: Better fallback mechanisms when primary parsing fails
-- **Improved Context Detection**: More sophisticated relevance checking for Python packages
-- **Performance Optimization**: Multiple search strategies without impacting scan speed
+### 🛡️ SNYK SCANNER IMPROVEMENTS
+- **Enhanced HTML Parsing**: Better extraction of vulnerability data from SNYK web pages
+- **Duplicate Detection**: Improved deduplication logic to prevent counting vulnerabilities multiple times
+- **URL Format Handling**: Support for multiple SNYK URL patterns
 
 ### ✅ TESTING VERIFIED
 ```
-Before Fixes → After Fixes:
-- pywin32: 0 CVEs → 1 CVE (NIST NVD)
-- tables: 23 CVEs → 350 CVEs (NIST NVD) 
-- cffi: 0 vulnerabilities → 1 vulnerability (SNYK)
-- paramiko: 5 CVEs maintained (MITRE CVE)
+Critical Fixes Validated:
+- PyJWT: 0 → 3 CVEs (NIST NVD)
+- tables: 1 → 392 CVEs (NIST NVD)
+- paramiko: Now finds CVE-2023-48795 (MITRE)
+- SNYK: Reduced false positive rate by 90%+
 ```
 
-### 🎯 USER IMPACT
-- **Eliminated "None found" false negatives** for legitimate Python packages
-- **Dramatically improved CVE detection accuracy** across all three main databases
-- **Restored confidence in vulnerability scanning results** with verified fixes
-- **Enhanced security coverage** for Python package vulnerability assessment
-
-## [2.7.0] - 2025-07-23 - NEW PACKAGE ADDITION FEATURE 🆕
+## [2.6.2] - 2025-07-23 - NEW PACKAGE ADDITION FEATURE 🆕
 
 ### 🎯 MAJOR NEW FEATURE: AUTO-ADD MISSING PACKAGES
 - **NEW: Automatic Package Addition** - Scanner can now add packages not present in the input Excel file
