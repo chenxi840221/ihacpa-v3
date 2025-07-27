@@ -23,6 +23,16 @@ try:
 except ImportError:
     openai = None
 
+# Import enhanced version parsing and validation
+try:
+    from .utils.version_parser import VulnerabilityVersionChecker, VersionParser
+    from .core.vulnerability_validator import VulnerabilityValidator, VulnerabilityReport, VulnerabilitySource
+except ImportError:
+    # Fallback if modules not available
+    VulnerabilityVersionChecker = None
+    VersionParser = None
+    VulnerabilityValidator = None
+
 
 class AICVEAnalyzer:
     """AI-powered CVE analyzer using OpenAI API (Standard or Azure)"""
@@ -39,6 +49,10 @@ class AICVEAnalyzer:
         """
         self.logger = logging.getLogger(__name__)
         self.is_azure = True  # Always use Azure OpenAI
+        
+        # Initialize enhanced version checking and validation
+        self.version_checker = VulnerabilityVersionChecker() if VulnerabilityVersionChecker else None
+        self.vulnerability_validator = VulnerabilityValidator() if VulnerabilityValidator else None
         
         # Set up API key
         self.api_key = api_key or os.getenv('AZURE_OPENAI_KEY')
@@ -258,6 +272,202 @@ class AICVEAnalyzer:
         except Exception as e:
             self.logger.error(f"Error in AI NIST NVD analysis for {package_name}: {e}")
             return f"AI NIST NVD analysis error - manual review required: {str(e)}"
+
+    async def analyze_vulnerability_with_enhanced_parsing(
+        self, 
+        package_name: str, 
+        current_version: str,
+        vulnerability_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Enhanced vulnerability analysis combining AI and automated version parsing.
+        This addresses the main issue of 131 packages requiring manual version checking.
+        
+        Args:
+            package_name: Name of the Python package
+            current_version: Currently installed version
+            vulnerability_data: Dictionary containing vulnerability info from multiple sources
+            
+        Returns:
+            Comprehensive analysis with confidence scoring and recommendations
+        """
+        if not self.enabled:
+            return {
+                'analysis_available': False,
+                'recommendation': 'MANUAL_REVIEW',
+                'confidence_score': 0.0,
+                'reason': 'AI analysis not available'
+            }
+        
+        try:
+            # Step 1: Automated version parsing analysis
+            automated_results = []
+            
+            if self.version_checker:
+                for source, data in vulnerability_data.items():
+                    if isinstance(data, dict) and 'result' in data:
+                        result = self.version_checker.check_vulnerability_applicability(
+                            package_name, current_version, data['result'], data.get('cve_id')
+                        )
+                        result['source'] = source
+                        automated_results.append(result)
+            
+            # Step 2: AI-enhanced analysis for unclear cases
+            ai_analysis = None
+            requires_ai = any(r.get('requires_manual_review', False) for r in automated_results)
+            
+            if requires_ai:
+                ai_prompt = self._create_enhanced_analysis_prompt(
+                    package_name, current_version, vulnerability_data, automated_results
+                )
+                ai_analysis = await self._call_openai_api(ai_prompt)
+            
+            # Step 3: Consolidate results
+            return self._consolidate_enhanced_analysis(
+                package_name, current_version, automated_results, ai_analysis
+            )
+            
+        except Exception as e:
+            self.logger.error(f"Enhanced analysis failed for {package_name}: {e}")
+            return {
+                'analysis_available': False,
+                'recommendation': 'MANUAL_REVIEW',
+                'confidence_score': 0.0,
+                'reason': f'Analysis error: {str(e)}'
+            }
+    
+    def _create_enhanced_analysis_prompt(
+        self, 
+        package_name: str, 
+        current_version: str,
+        vulnerability_data: Dict[str, Any],
+        automated_results: List[Dict]
+    ) -> str:
+        """Create enhanced AI prompt with automated analysis context."""
+        
+        # Summarize automated findings
+        auto_summary = []
+        for result in automated_results:
+            source = result.get('source', 'unknown')
+            confidence = result.get('confidence_score', 0.0)
+            affected = result.get('is_affected', None)
+            auto_summary.append(f"{source}: confidence={confidence:.2f}, affected={affected}")
+        
+        prompt = f"""
+You are a cybersecurity expert performing enhanced vulnerability analysis for Python packages.
+
+PACKAGE INFORMATION:
+- Package Name: {package_name}
+- Current Version: {current_version}
+
+AUTOMATED ANALYSIS RESULTS:
+{chr(10).join(auto_summary)}
+
+VULNERABILITY DATA:
+{json.dumps(vulnerability_data, indent=2)[:1500]}...
+
+TASK:
+The automated version parsing system has analyzed this package but found unclear results that require expert review. 
+Your job is to:
+
+1. Review the automated analysis confidence scores
+2. Examine the raw vulnerability data for version-specific information
+3. Make a definitive assessment about whether version {current_version} is affected
+4. Provide a high-confidence recommendation
+
+FOCUS ON:
+- Exact version ranges mentioned in CVE descriptions
+- Version comparison logic (is {current_version} in affected range?)
+- Cross-validation between different vulnerability sources
+- Confidence assessment based on data clarity
+
+RESPONSE FORMAT:
+Provide JSON response:
+{{
+    "version_affected": true/false/unclear,
+    "confidence_level": "high"/"medium"/"low",
+    "reasoning": "Brief explanation of version impact assessment",
+    "recommendation": "VULNERABLE"/"SAFE"/"MANUAL_REVIEW",
+    "key_findings": ["finding1", "finding2"]
+}}
+"""
+        return prompt
+    
+    def _consolidate_enhanced_analysis(
+        self,
+        package_name: str,
+        current_version: str,
+        automated_results: List[Dict],
+        ai_analysis: Optional[str]
+    ) -> Dict[str, Any]:
+        """Consolidate automated and AI analysis results."""
+        
+        # Calculate overall confidence from automated results
+        auto_confidences = [r.get('confidence_score', 0.0) for r in automated_results]
+        avg_auto_confidence = sum(auto_confidences) / len(auto_confidences) if auto_confidences else 0.0
+        
+        # Parse AI analysis if available
+        ai_confidence = 0.0
+        ai_recommendation = 'MANUAL_REVIEW'
+        
+        if ai_analysis:
+            try:
+                # Try to parse JSON response
+                import json
+                ai_data = json.loads(ai_analysis.strip())
+                ai_confidence = 0.9 if ai_data.get('confidence_level') == 'high' else 0.7 if ai_data.get('confidence_level') == 'medium' else 0.4
+                ai_recommendation = ai_data.get('recommendation', 'MANUAL_REVIEW')
+            except (json.JSONDecodeError, KeyError):
+                # Fallback to text parsing
+                if 'high' in ai_analysis.lower() and 'confidence' in ai_analysis.lower():
+                    ai_confidence = 0.8
+                elif 'vulnerable' in ai_analysis.lower():
+                    ai_recommendation = 'VULNERABLE'
+                elif 'safe' in ai_analysis.lower():
+                    ai_recommendation = 'SAFE'
+        
+        # Determine final recommendation
+        final_confidence = max(avg_auto_confidence, ai_confidence)
+        
+        if final_confidence >= 0.8:
+            analysis_method = 'high_confidence_enhanced'
+            requires_manual = False
+        elif final_confidence >= 0.6:
+            analysis_method = 'medium_confidence_enhanced'
+            requires_manual = False
+        else:
+            analysis_method = 'low_confidence_manual'
+            requires_manual = True
+        
+        # Choose recommendation based on highest confidence source
+        if ai_confidence > avg_auto_confidence and ai_recommendation != 'MANUAL_REVIEW':
+            final_recommendation = ai_recommendation
+        else:
+            # Use automated results consensus
+            vulnerable_count = sum(1 for r in automated_results if r.get('is_affected'))
+            safe_count = sum(1 for r in automated_results if r.get('is_affected') == False)
+            
+            if vulnerable_count > safe_count:
+                final_recommendation = 'VULNERABLE'
+            elif safe_count > vulnerable_count:
+                final_recommendation = 'SAFE'
+            else:
+                final_recommendation = 'MANUAL_REVIEW'
+        
+        return {
+            'package_name': package_name,
+            'package_version': current_version,
+            'analysis_available': True,
+            'recommendation': final_recommendation,
+            'confidence_score': final_confidence,
+            'analysis_method': analysis_method,
+            'requires_manual_review': requires_manual,
+            'automated_results': automated_results,
+            'ai_analysis': ai_analysis,
+            'source_count': len(automated_results),
+            'avg_auto_confidence': avg_auto_confidence,
+            'ai_confidence': ai_confidence
+        }
 
     async def analyze_github_advisory_result(self, package_name: str, current_version: str, 
                                            github_advisory_url: str, raw_github_data: str = None) -> str:
