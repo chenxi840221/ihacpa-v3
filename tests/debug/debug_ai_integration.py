@@ -46,7 +46,7 @@ def test_vulnerability_scanner_integration():
     print("=" * 50)
     
     try:
-        from src.vulnerability_scanner import VulnerabilityScanner
+        from ...src.vulnerability_scanner import VulnerabilityScanner
         
         # Initialize scanner with current environment
         scanner = VulnerabilityScanner()
@@ -80,7 +80,7 @@ async def test_mitre_scan():
     print("=" * 40)
     
     try:
-        from src.vulnerability_scanner import VulnerabilityScanner
+        from ...src.vulnerability_scanner import VulnerabilityScanner
         
         scanner = VulnerabilityScanner()
         

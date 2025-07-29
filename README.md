@@ -182,8 +182,10 @@ The system now supports **enhanced automated analysis** with **dramatic reductio
 # Test the enhanced analysis system
 python enhanced_vulnerability_analysis.py
 
-# Test individual components
-python test_improvements.py
+# Run organized test suite
+python -m pytest tests/integration/
+python tests/debug/debug_scanner.py
+python tests/verification/full_verification.py
 ```
 
 ### Complete AI-Powered Vulnerability Analysis Setup ✨
@@ -514,6 +516,71 @@ Success rate: 100.0%
 6. **Timestamped Files**: All outputs have timestamps for tracking and version control
 7. **Safe Operations**: System always creates backups before making changes
 
+## Testing Framework 🧪
+
+The project includes a comprehensive testing framework organized into specialized categories:
+
+### Test Directory Structure
+```
+tests/
+├── analysis/           # Analysis and investigation scripts
+├── debug/             # Debug scripts for troubleshooting specific issues
+├── integration/       # Integration tests for various components
+├── utilities/         # Utility scripts for testing and data extraction
+├── verification/      # Verification and validation scripts
+└── README.md         # Detailed testing documentation
+```
+
+### Running Tests
+
+#### Integration Tests
+```bash
+# Run all integration tests
+python -m pytest tests/integration/
+
+# Run specific integration test
+python tests/integration/test_vulnerability_scanner.py
+python tests/integration/test_ai_cve.py
+```
+
+#### Debug and Troubleshooting
+```bash
+# Debug specific scanner issues
+python tests/debug/debug_scanner.py
+python tests/debug/debug_nist_issues.py
+
+# Debug AI integration
+python tests/debug/debug_ai_integration.py
+```
+
+#### Verification and Validation
+```bash
+# Run full system verification
+python tests/verification/full_verification.py
+
+# Verify specific fixes
+python tests/verification/verify_fix.py
+python tests/verification/verify_all_previous_fixes.py
+```
+
+#### Analysis Tools
+```bash
+# Analyze manual review requirements
+python tests/analysis/analyze_manual_review.py
+
+# Investigate formatting issues
+python tests/analysis/investigate_font_issue.py
+```
+
+### Test Categories
+- **Integration Tests**: Full system and component integration testing
+- **Debug Scripts**: Issue-specific debugging and troubleshooting tools
+- **Verification Scripts**: Validation of fixes and system functionality
+- **Analysis Scripts**: Data analysis and investigation tools
+- **Utility Scripts**: Helper tools for data extraction and processing
+
+For detailed testing instructions, see `tests/README.md`.
+
 ## Project Structure
 
 ```
@@ -544,9 +611,14 @@ ihacpa-automation/
 │   ├── output/                  # Generated reports
 │   └── backups/                 # Backup files
 ├── logs/                        # Application logs
-├── tests/                       # Test files
+├── tests/                       # 🆕 Organized test suite
+│   ├── analysis/                # Analysis and investigation scripts
+│   ├── debug/                   # Debug scripts for troubleshooting
+│   ├── integration/             # Integration tests for components
+│   ├── utilities/               # Testing utility scripts
+│   ├── verification/            # Verification and validation scripts
+│   └── README.md               # Test documentation
 ├── enhanced_vulnerability_analysis.py # 🆕 Enhanced analysis demo
-├── test_improvements.py        # 🆕 Comprehensive test suite
 ├── improvement_plan.md          # 🆕 Implementation status
 └── requirements.txt             # ✅ Python dependencies
 ```

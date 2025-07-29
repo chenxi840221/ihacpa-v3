@@ -46,7 +46,7 @@ def test_ai_analyzer():
     print("=" * 40)
     
     try:
-        from src.ai_cve_analyzer import AICVEAnalyzer
+        from ...src.ai_cve_analyzer import AICVEAnalyzer
         
         analyzer = AICVEAnalyzer()
         
@@ -71,7 +71,7 @@ def test_vulnerability_scanner():
     print("=" * 40)
     
     try:
-        from src.vulnerability_scanner import VulnerabilityScanner
+        from ...src.vulnerability_scanner import VulnerabilityScanner
         
         scanner = VulnerabilityScanner()
         
@@ -93,7 +93,7 @@ async def test_live_analysis():
     print("=" * 40)
     
     try:
-        from src.ai_cve_analyzer import AICVEAnalyzer
+        from ...src.ai_cve_analyzer import AICVEAnalyzer
         
         analyzer = AICVEAnalyzer()
         

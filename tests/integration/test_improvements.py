@@ -13,9 +13,9 @@ from typing import Dict, Any
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
 try:
-    from src.utils.version_parser import VersionParser, VulnerabilityVersionChecker
-    from src.core.vulnerability_validator import VulnerabilityValidator, VulnerabilityReport, VulnerabilitySource
-    from src.ai_cve_analyzer import AICVEAnalyzer
+    from ...src.utils.version_parser import VersionParser, VulnerabilityVersionChecker
+    from ...src.core.vulnerability_validator import VulnerabilityValidator, VulnerabilityReport, VulnerabilitySource
+    from ...src.ai_cve_analyzer import AICVEAnalyzer
 except ImportError as e:
     print(f"Import error: {e}")
     print("Make sure you're running from the project root directory")

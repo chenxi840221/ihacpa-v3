@@ -19,7 +19,7 @@ except ImportError:
 # Add src directory to path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from src.ai_cve_analyzer import AICVEAnalyzer
+from ...src.ai_cve_analyzer import AICVEAnalyzer
 
 
 async def test_ai_cve_analysis():

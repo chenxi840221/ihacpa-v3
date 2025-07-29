@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 import aiohttp
-from src.vulnerability_scanner import VulnerabilityScanner
+from ...src.vulnerability_scanner import VulnerabilityScanner
 
 
 class MockResponse:

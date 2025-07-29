@@ -11,8 +11,8 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.main import IHACPAAutomation
-from src.config import Config
+from ...src.main import IHACPAAutomation
+from ...src.config import Config
 
 async def test_format_check():
     """Test the format check functionality"""
