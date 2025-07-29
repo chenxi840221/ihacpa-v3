@@ -10,7 +10,7 @@ This project automates the cybersecurity vulnerability review process for Python
 - **Status:** ✅ **VERSION 3.0.0** - Enhanced Vulnerability Analysis with Confidence Scoring
 - **Latest Achievement:** Reduced manual review requirements from 27% to <5% through enhanced automation
 - **Key Improvements:** AI-enhanced version parsing, multi-source validation, confidence scoring, automated decision making
-- **Repository:** https://github.com/chenxi840221/Sean-IHACPA-Python-Security-Automation
+- **Repository:** https://github.com/chenxi840221/ihacpa-v3
 
 ## Key Features
 
