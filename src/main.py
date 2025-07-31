@@ -354,8 +354,13 @@ class IHACPAAutomation:
                     result_field = f"{db_name}_result"
                     
                     if url_field in self.excel_handler.COLUMN_MAPPING:
-                        # Use simple URL (consistent with batch processing)
-                        updates[url_field] = result.get('search_url', '')
+                        # Generate hyperlink formula with descriptive text
+                        search_url = result.get('search_url', '')
+                        if search_url:
+                            hyperlink_formula = self._generate_hyperlink_formula(db_name, package_name, search_url)
+                            updates[url_field] = hyperlink_formula
+                        else:
+                            updates[url_field] = ''
                     
                     if result_field in self.excel_handler.COLUMN_MAPPING:
                         updates[result_field] = result.get('summary', '')
@@ -436,14 +441,29 @@ class IHACPAAutomation:
             self.logger.warning(f"Error formatting date {date_obj}: {e}")
             return date_obj if date_obj else None
     
-    def _generate_hyperlink_formula(self, db_name: str, row_number: int, search_url: str) -> str:
-        """Generate simple URL for vulnerability database searches"""
-        if not search_url:
+    def _generate_hyperlink_formula(self, db_name: str, package_name: str, search_url: str) -> str:
+        """Generate Excel HYPERLINK formula with descriptive text for vulnerability database searches"""
+        if not search_url or not package_name:
             return ""
         
-        # Return the API search URL directly (cleaner and more reliable)
-        # This matches the format the user requested: https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=aiohttp
-        return search_url
+        # Define database display names for hyperlink text
+        db_display_names = {
+            'nist_nvd': 'NVD NIST',
+            'mitre_cve': 'CVE MITRE', 
+            'snyk': 'Snyk',
+            'exploit_db': 'Exploit-DB'
+        }
+        
+        if db_name not in db_display_names:
+            return search_url  # fallback to plain URL
+        
+        display_name = db_display_names[db_name]
+        display_text = f"{display_name} {package_name} link"
+        
+        # Generate Excel HYPERLINK formula
+        hyperlink_formula = f'=HYPERLINK("{search_url}","{display_text}")'
+        
+        return hyperlink_formula
     
     def generate_report(self, output_path: Optional[str] = None) -> bool:
         """Generate summary report"""
@@ -1050,13 +1070,24 @@ async def main():
                                     url_field = f"{db_name}_url"
                                     result_field = f"{db_name}_result"
                                     
-                                    # Add search URL
+                                    # Add search URL with hyperlink formula
                                     if result.get('search_url'):
-                                        updates[url_field] = result.get('search_url', '')
+                                        search_url = result.get('search_url', '')
+                                        hyperlink_formula = automation._generate_hyperlink_formula(db_name, package_name, search_url)
+                                        updates[url_field] = hyperlink_formula
                                     
                                     # Add vulnerability scan result summary
                                     if result.get('summary'):
                                         updates[result_field] = result.get('summary', '')
+                                
+                                # Generate recommendations (was missing in batch processing!)
+                                recommendations = automation.vulnerability_scanner.generate_recommendations(
+                                    package_name, 
+                                    package_data.get('current_version', ''),
+                                    pypi_info.get('latest_version', '') if pypi_info else '',
+                                    vuln_results
+                                )
+                                updates['recommendation'] = recommendations
                             
                             return {
                                 'success': True,

@@ -4,6 +4,33 @@ All notable changes to the IHACPA Python Package Review Automation project are d
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2025-07-31 - CRITICAL FIXES & ENHANCEMENTS 🛠️
+
+### 🚨 CRITICAL BUG FIXES
+- **FIXED: Column W Recommendation Logic** - Fixed critical issue where all packages showed "PROCEED" regardless of vulnerabilities
+- **FIXED: Batch Processing Recommendations** - Added missing recommendation generation in batch processing path
+- **FIXED: Pattern Matching for New Format** - Updated classification patterns to work with "From Raw URL:" format
+
+### 🎨 URL COLUMN ENHANCEMENTS
+- **NEW: Hyperlink Formulas** - Columns O,Q,S,U now display clickable hyperlinks with descriptive text
+- **IMPROVED: URL Display** - Changed from plain URLs to formatted hyperlinks like "NVD NIST [package] link"
+- **ENHANCED: User Experience** - Professional presentation with working hyperlinks in Excel
+
+### 🔧 RECOMMENDATION LOGIC FIXES
+- **Pattern Updates**: Changed from `'safe -'` to `'- safe -'` for proper classification
+- **Count Extraction**: Added logic to extract vulnerability counts from "From Raw URL: X total" format
+- **Classification Logic**: Fixed _classify_database_result_enhanced() to properly categorize results
+- **Debug Logging**: Added comprehensive logging for troubleshooting recommendation generation
+
+### ✅ VALIDATION VERIFIED
+```
+Tested Packages:
+- agate: ✅ PROCEED WITH UPDATE (3 CVEs found but safe)
+- arrow: 🔍 MANUAL REVIEW (51 NIST, 47 MITRE CVEs)
+- aiobotocore: 🚨 SECURITY RISK (1 SNYK vulnerability)
+- aiofiles: ✅ PROCEED WITH UPDATE (No vulnerabilities)
+```
+
 ## [3.1.0] - 2025-07-31 - BATCH PROCESSING & UNIVERSAL FORMAT 🚀
 
 ### 🎯 MAJOR NEW FEATURES
