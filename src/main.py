@@ -27,6 +27,9 @@ from logger import setup_application_logging, ProgressLogger, ErrorHandler
 from excel_handler import ExcelHandler
 from pypi_client import PyPIClient
 from vulnerability_scanner import VulnerabilityScanner
+from batch_controller import BatchController, BatchConfig, BatchState, ResumeOptions
+from checkpoint_manager import CheckpointManager
+from atomic_saver import AtomicSaver
 import logging
 
 
@@ -45,6 +48,9 @@ class IHACPAAutomation:
         self.excel_handler = None
         self.pypi_client = None
         self.vulnerability_scanner = None
+        self.batch_controller = None
+        self.checkpoint_manager = None
+        self.atomic_saver = None
         
     def setup(self, input_file: str, output_file: str = None) -> bool:
         """Setup all components"""
@@ -92,6 +98,25 @@ class IHACPAAutomation:
             self.pypi_client = PyPIClient(
                 timeout=self.config.processing.request_timeout,
                 max_retries=self.config.processing.retry_attempts
+            )
+            
+            # Setup batch processing components if needed
+            self.checkpoint_manager = CheckpointManager(
+                checkpoint_dir=Path("data/checkpoints"),
+                excel_file_path=Path(self.output_file_path),
+                logger=self.logger
+            )
+            
+            self.atomic_saver = AtomicSaver(
+                excel_handler=self.excel_handler,
+                logger=self.logger
+            )
+            
+            self.batch_controller = BatchController(
+                config=self.config,
+                excel_handler=self.excel_handler,
+                logger=self.logger,
+                progress_logger=self.progress_logger
             )
             
             # Setup vulnerability scanner with OpenAI/Azure API configuration
@@ -329,9 +354,8 @@ class IHACPAAutomation:
                     result_field = f"{db_name}_result"
                     
                     if url_field in self.excel_handler.COLUMN_MAPPING:
-                        # Generate hyperlink formula instead of plain URL
-                        hyperlink_formula = self._generate_hyperlink_formula(db_name, row_number, result.get('search_url', ''))
-                        updates[url_field] = hyperlink_formula
+                        # Use simple URL (consistent with batch processing)
+                        updates[url_field] = result.get('search_url', '')
                     
                     if result_field in self.excel_handler.COLUMN_MAPPING:
                         updates[result_field] = result.get('summary', '')
@@ -413,53 +437,13 @@ class IHACPAAutomation:
             return date_obj if date_obj else None
     
     def _generate_hyperlink_formula(self, db_name: str, row_number: int, search_url: str) -> str:
-        """Generate Excel hyperlink formula for vulnerability database URLs"""
+        """Generate simple URL for vulnerability database searches"""
         if not search_url:
             return ""
         
-        # Define database display names and base URL patterns
-        db_configs = {
-            'nist_nvd': {
-                'display_name': 'NVD NIST',
-                'base_url': 'https://nvd.nist.gov/vuln/search/results?form_type=Basic&results_type=overview&query=',
-                'suffix': '&search_type=all&isCpeNameSearch=false'
-            },
-            'mitre_cve': {
-                'display_name': 'CVE MITRE', 
-                'base_url': 'https://cve.mitre.org/cgi-bin/cvekey.cgi?keyword=',
-                'suffix': ''
-            },
-            'snyk': {
-                'display_name': 'Snyk',
-                'base_url': 'https://security.snyk.io/vuln/pip?search=',
-                'suffix': ''
-            },
-            'exploit_db': {
-                'display_name': 'Exploit-DB',
-                'base_url': 'https://www.exploit-db.com/search?text=',
-                'suffix': ''
-            }
-        }
-        
-        if db_name not in db_configs:
-            return search_url  # fallback to plain URL
-        
-        config = db_configs[db_name]
-        cell_ref = f"$B{row_number}"  # Package name is in column B
-        
-        # Generate hyperlink formula using CONCATENATE for URL construction
-        if config['suffix']:
-            url_formula = f'CONCATENATE("{config["base_url"]}",{cell_ref},"{config["suffix"]}")'
-        else:
-            url_formula = f'CONCATENATE("{config["base_url"]}",{cell_ref})'
-        
-        # Generate display text
-        display_text = f'CONCATENATE("{config["display_name"]} ",{cell_ref}," link")'
-        
-        # Combine into HYPERLINK formula
-        hyperlink_formula = f'=HYPERLINK({url_formula},{display_text})'
-        
-        return hyperlink_formula
+        # Return the API search URL directly (cleaner and more reliable)
+        # This matches the format the user requested: https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=aiohttp
+        return search_url
     
     def generate_report(self, output_path: Optional[str] = None) -> bool:
         """Generate summary report"""
@@ -803,7 +787,154 @@ Examples:
         help='Quiet mode - minimal output'
     )
     
+    # Batch processing options
+    batch_group = parser.add_argument_group('Batch Processing Options')
+    
+    batch_group.add_argument(
+        '--enable-batch-processing',
+        action='store_true',
+        help='Enable intelligent batch processing with checkpointing'
+    )
+    
+    batch_group.add_argument(
+        '--batch-size',
+        type=int,
+        default=10,
+        help='Number of packages per batch (default: 10)'
+    )
+    
+    batch_group.add_argument(
+        '--batch-strategy',
+        choices=['fixed-size', 'memory-adaptive', 'time-based'],
+        default='fixed-size',
+        help='Batch processing strategy (default: fixed-size)'
+    )
+    
+    # Resume and start point options
+    resume_group = parser.add_argument_group('Resume and Start Point Options')
+    
+    resume_group.add_argument(
+        '--start-fresh',
+        action='store_true',
+        help='Start processing from the beginning, ignoring any existing checkpoints'
+    )
+    
+    resume_group.add_argument(
+        '--resume-auto',
+        action='store_true',
+        help='Automatically resume from the latest checkpoint if available'
+    )
+    
+    resume_group.add_argument(
+        '--resume-from-package',
+        type=int,
+        metavar='N',
+        help='Resume processing from package number N (1-based index)'
+    )
+    
+    resume_group.add_argument(
+        '--resume-from-batch',
+        type=int,
+        metavar='N',
+        help='Resume processing from the beginning of batch number N'
+    )
+    
+    resume_group.add_argument(
+        '--list-checkpoints',
+        action='store_true',
+        help='List available checkpoints and exit'
+    )
+    
+    resume_group.add_argument(
+        '--validate-checkpoint',
+        metavar='CHECKPOINT_ID',
+        help='Validate a specific checkpoint and show details'
+    )
+    
+    resume_group.add_argument(
+        '--force-continue',
+        action='store_true',
+        help='Force continue processing even when validation fails'
+    )
+    
     return parser
+
+
+# Batch processing integration methods for IHACPAAutomation class
+async def handle_checkpoint_operations(automation, args) -> Optional[int]:
+    """
+    Handle checkpoint-related CLI operations
+    
+    Returns:
+        Exit code if operation should terminate, None to continue
+    """
+    try:
+        if args.list_checkpoints:
+            checkpoints = automation.checkpoint_manager.list_available_checkpoints()
+            
+            if not checkpoints:
+                print("No checkpoints found.")
+                return 0
+            
+            print(f"\nFound {len(checkpoints)} checkpoints:")
+            print("-" * 80)
+            
+            for checkpoint in checkpoints:
+                created = checkpoint.get('created', 'Unknown')
+                completed = checkpoint.get('completed_packages', 0)
+                total = checkpoint.get('total_packages', 0)
+                batch = checkpoint.get('current_batch', 0)
+                strategy = checkpoint.get('strategy', 'unknown')
+                has_backup = "✓" if checkpoint.get('has_backup') else "✗"
+                
+                print(f"ID: {checkpoint['checkpoint_id'][:12]}...")
+                print(f"  Created: {created}")
+                print(f"  Progress: {completed}/{total} packages ({completed/total*100:.1f}%)")
+                print(f"  Current Batch: {batch}")
+                print(f"  Strategy: {strategy}")
+                print(f"  Has Backup: {has_backup}")
+                print()
+            
+            return 0
+        
+        if args.validate_checkpoint:
+            validation = await automation.checkpoint_manager.validate_checkpoint(args.validate_checkpoint)
+            
+            print(f"\nCheckpoint Validation: {args.validate_checkpoint}")
+            print("-" * 50)
+            print(f"Valid: {'✓' if validation.is_valid else '✗'}")
+            print(f"Excel File Matches: {'✓' if validation.excel_file_matches else '✗'}")
+            print(f"Metadata Valid: {'✓' if validation.metadata_valid else '✗'}")
+            print(f"Can Resume: {'✓' if validation.can_resume else '✗'}")
+            
+            if validation.issues:
+                print("\nIssues:")
+                for issue in validation.issues:
+                    print(f"  - {issue}")
+            
+            if validation.recommendations:
+                print("\nRecommendations:")
+                for rec in validation.recommendations:
+                    print(f"  - {rec}")
+            
+            return 0
+        
+        return None
+        
+    except Exception as e:
+        automation.logger.error(f"Checkpoint operation failed: {e}")
+        return 1
+
+
+def create_resume_options(args) -> ResumeOptions:
+    """Create ResumeOptions from CLI arguments"""
+    return ResumeOptions(
+        start_fresh=args.start_fresh,
+        resume_auto=args.resume_auto,
+        resume_from_package=args.resume_from_package,
+        resume_from_batch=args.resume_from_batch,
+        force_continue=args.force_continue
+    )
 
 
 async def main():
@@ -836,6 +967,11 @@ async def main():
             print("Failed to setup automation")
             return 1
         
+        # Handle checkpoint operations first (these may exit early)
+        checkpoint_exit_code = await handle_checkpoint_operations(automation, args)
+        if checkpoint_exit_code is not None:
+            return checkpoint_exit_code
+        
         # Handle format check operations
         if args.format_check or args.format_check_only:
             automation.logger.info("Running format check...")
@@ -854,17 +990,109 @@ async def main():
         if not args.report_only and not args.changes_only and not args.format_check_only:
             if args.dry_run:
                 automation.logger.info("DRY RUN MODE - No changes will be made")
-                # In dry-run mode, still process packages but don't save changes
-                success = await automation.process_packages(
+            
+            # Determine processing method based on batch processing flag
+            if args.enable_batch_processing:
+                automation.logger.info("Using intelligent batch processing with checkpointing")
+                
+                # Configure batch settings
+                automation.batch_controller.batch_config.batch_size = args.batch_size
+                automation.batch_controller.batch_config.strategy = args.batch_strategy
+                
+                # Create resume options
+                resume_options = create_resume_options(args)
+                
+                # Get packages to process
+                packages = automation.excel_handler.get_packages_to_process(
                     start_row=args.start_row,
                     end_row=args.end_row,
                     package_names=args.packages
                 )
                 
-                if not success:
-                    automation.logger.error("Package processing failed")
-                    return 1
+                if not packages:
+                    automation.logger.warning("No packages to process")
+                else:
+                    # Initialize batch processing
+                    init_success = await automation.batch_controller.initialize_batch_processing(
+                        total_packages=len(packages),
+                        resume_options=resume_options
+                    )
+                    
+                    if not init_success:
+                        automation.logger.error("Failed to initialize batch processing")
+                        return 1
+                    
+                    # Define package processor function
+                    async def process_single_package(package_data: Dict[str, Any]) -> Dict[str, Any]:
+                        try:
+                            package_name = package_data.get('package_name', 'unknown')
+                            
+                            # Get PyPI information
+                            pypi_info = await automation.pypi_client.get_package_info_async(package_name)
+                            
+                            # Scan for vulnerabilities
+                            vuln_results = await automation.vulnerability_scanner.scan_all_databases(
+                                package_name=package_name,
+                                current_version=package_data.get('current_version', ''),
+                                github_url=pypi_info.get('github_url', '') if pypi_info else ''
+                            )
+                            
+                            # Combine results
+                            updates = {}
+                            if pypi_info:
+                                updates.update(pypi_info)
+                            if vuln_results:
+                                # Process vulnerability results correctly for batch processing
+                                scan_results = vuln_results.get('scan_results', {})
+                                
+                                # Update database URLs and results for each scanner
+                                for db_name, result in scan_results.items():
+                                    url_field = f"{db_name}_url"
+                                    result_field = f"{db_name}_result"
+                                    
+                                    # Add search URL
+                                    if result.get('search_url'):
+                                        updates[url_field] = result.get('search_url', '')
+                                    
+                                    # Add vulnerability scan result summary
+                                    if result.get('summary'):
+                                        updates[result_field] = result.get('summary', '')
+                            
+                            return {
+                                'success': True,
+                                'package_name': package_name,
+                                'updates': updates
+                            }
+                            
+                        except Exception as e:
+                            automation.logger.error(f"Failed to process package {package_name}: {e}")
+                            return {
+                                'success': False,
+                                'package_name': package_name,
+                                'error': str(e)
+                            }
+                    
+                    # Process packages in batches
+                    results = await automation.batch_controller.process_packages_in_batches(
+                        packages=packages,
+                        processor_func=process_single_package
+                    )
+                    
+                    # Log results
+                    automation.logger.info(f"Batch processing completed:")
+                    automation.logger.info(f"  Total: {results['total_processed']}")
+                    automation.logger.info(f"  Successful: {results['successful']}")
+                    automation.logger.info(f"  Failed: {results['failed']}")
+                    automation.logger.info(f"  Batches: {results['batches_completed']}")
+                    automation.logger.info(f"  Checkpoints: {results['checkpoints_created']}")
+                    automation.logger.info(f"  Time: {results['processing_time']:.2f}s")
+                    
+                    if results['successful'] == 0:
+                        automation.logger.error("No packages processed successfully")
+                        return 1
             else:
+                # Use traditional processing
+                automation.logger.info("Using traditional sequential processing")
                 success = await automation.process_packages(
                     start_row=args.start_row,
                     end_row=args.end_row,
@@ -874,11 +1102,11 @@ async def main():
                 if not success:
                     automation.logger.error("Package processing failed")
                     return 1
-                
-                # Run format check after processing if enabled
-                if args.format_check:
-                    automation.logger.info("Running post-processing format check...")
-                    automation.run_format_check(fix=True)
+            
+            # Run format check after processing if enabled
+            if args.format_check and not args.dry_run:
+                automation.logger.info("Running post-processing format check...")
+                automation.run_format_check(fix=True)
         
         # Generate report
         if config.output.create_reports and not args.changes_only:

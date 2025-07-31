@@ -153,6 +153,13 @@ class ExcelHandler:
                     if hasattr(value, 'microsecond'):
                         value = value.replace(microsecond=0)
                     
+                    # Convert lists to strings for Excel compatibility
+                    if isinstance(value, list):
+                        if value:  # Non-empty list
+                            value = ', '.join(str(item) for item in value)
+                        else:  # Empty list
+                            value = ""
+                    
                     # Only update if value has changed
                     if original_value != value:
                         cell.value = value
@@ -600,6 +607,48 @@ class ExcelHandler:
                     packages_needing_update.append(package_data)
                     
         return packages_needing_update
+    
+    def get_packages_to_process(self, start_row: int = None, end_row: int = None, 
+                               package_names: List[str] = None) -> List[Dict[str, Any]]:
+        """
+        Get packages to process based on specified criteria
+        
+        Args:
+            start_row: Starting row number (inclusive)
+            end_row: Ending row number (inclusive)  
+            package_names: List of specific package names to process
+            
+        Returns:
+            List of package data dictionaries
+        """
+        if not self.worksheet:
+            return []
+        
+        packages_to_process = []
+        
+        # If specific package names are provided, find them
+        if package_names:
+            all_packages = self.get_all_packages()
+            for package in all_packages:
+                if package.get('package_name') in package_names:
+                    packages_to_process.append(package)
+            return packages_to_process
+        
+        # Determine row range
+        if start_row is None:
+            start_row = self.DATA_START_ROW
+        if end_row is None:
+            end_row = self.worksheet.max_row
+        
+        # Get packages in the specified range
+        for row in range(start_row, end_row + 1):
+            package_name = self.worksheet.cell(row=row, column=self.COLUMN_MAPPING['package_name']).value
+            if package_name:
+                package_data = self.get_package_data(row)
+                package_data['row_number'] = row
+                packages_to_process.append(package_data)
+        
+        return packages_to_process
     
     def get_file_info(self) -> Dict[str, Any]:
         """Get general information about the Excel file"""

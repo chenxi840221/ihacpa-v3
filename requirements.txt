@@ -28,6 +28,9 @@ python-dateutil>=2.8.0             # Date parsing for package releases
 certifi>=2023.11.17                # SSL certificates for HTTPS requests
 charset-normalizer>=3.0.0          # Character encoding handling
 
+# System monitoring for memory-adaptive batch processing
+psutil>=5.9.0                      # System and process monitoring for adaptive batch sizing
+
 # Version comparison and semantic versioning (ENHANCED: Critical for vulnerability version checking)
 packaging>=21.0                    # Version parsing and comparison for vulnerability assessment
 

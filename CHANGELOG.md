@@ -4,6 +4,49 @@ All notable changes to the IHACPA Python Package Review Automation project are d
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-07-31 - BATCH PROCESSING & UNIVERSAL FORMAT 🚀
+
+### 🎯 MAJOR NEW FEATURES
+- **NEW: Intelligent Batch Processing** - Process large datasets efficiently with checkpointing and recovery
+- **NEW: Universal Format for Vulnerability Columns** - Consistent "From Raw URL: X total" format across all databases
+- **ENHANCED: Raw API Count Tracking** - Display raw vulnerability counts before filtering for transparency
+- **IMPROVED: URL Generation** - Fixed URL generation bugs showing wrong package names
+
+### 🔧 BATCH PROCESSING SYSTEM
+- **Intelligent Batching**: Memory-adaptive batch sizing with configurable strategies
+- **Checkpoint Management**: Automatic recovery from interruptions with detailed validation
+- **Atomic Operations**: Safe Excel file handling with backup and rollback capabilities
+- **Progress Tracking**: Real-time progress monitoring with comprehensive logging
+- **Resume Options**: Multiple resume strategies (auto, from package, from batch, force continue)
+
+### 🎨 UNIVERSAL FORMAT IMPLEMENTATION
+- **Consistent Prefix**: All vulnerability columns now use "From Raw URL: X total" format
+- **Raw Count Display**: Shows actual API results before filtering/processing
+- **Color-Coded Results**: Maintained existing cell formatting while adding raw counts
+- **Enhanced Transparency**: Users can see both raw API results and processed findings
+
+### 🔍 VULNERABILITY SCANNER FIXES
+- **FIXED: URL Generation Bug** - NIST URLs now correctly show searched package names
+- **FIXED: Batch Processing Data Extraction** - Vulnerability results properly extracted in batch mode
+- **IMPROVED: Column Updates** - All vulnerability columns (P,R,T,V) update correctly in batch processing
+- **ENHANCED: Error Handling** - Better handling of list data types in Excel export
+
+### 📊 TECHNICAL IMPROVEMENTS
+- **New Components**: BatchController, CheckpointManager, AtomicSaver classes
+- **Enhanced Excel Handler**: List-to-string conversion, better data validation
+- **Memory Monitoring**: psutil integration for adaptive batch sizing
+- **Comprehensive Testing**: 15+ test scripts for batch processing validation
+
+### ✅ VALIDATION VERIFIED
+```
+Batch Processing Tests:
+- 486 packages processed successfully in batches
+- Checkpoint recovery verified across interruptions
+- Universal format applied to all vulnerability columns
+- Raw API counts displayed accurately
+- URL generation fixed for all databases
+```
+
 ## [2.7.0] - 2025-07-23 - MAJOR VULNERABILITY SCANNER FIXES 🚨
 
 ### 🎯 CRITICAL VULNERABILITY DETECTION FIXES
