@@ -4,6 +4,52 @@ All notable changes to the IHACPA Python Package Review Automation project are d
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-07-31 - ENHANCED FORMAT & CRITICAL COLUMN W FIX 🎯
+
+### 🎨 ENHANCED UNIVERSAL FORMAT (MAJOR IMPROVEMENT)
+- **NEW: Filtering Transparency** - Format now shows "From Raw URL: X total, Y Python-relevant" when filtering occurred
+- **IMPROVED: User Understanding** - Clear indication of how many results were filtered vs relevant
+- **ENHANCED: Context Clarity** - Users now understand why raw counts differ from processed counts
+- **MAINTAINED: Consistency** - Preserved "From Raw URL:" prefix across all databases
+
+### 🚨 CRITICAL COLUMN W RECOMMENDATION FIX
+- **FIXED: Incorrect Vulnerability Counts** - Column W now uses correct vulnerable counts instead of raw/filtered totals
+- **ENHANCED: Count Extraction Logic** - Different extraction rules for VULNERABLE vs MANUAL REVIEW vs SAFE results
+- **IMPROVED: Accuracy** - VULNERABLE results now extract actual vulnerable counts (e.g., "3 CVEs affect" not "16 Python-relevant")
+- **VERIFIED: Real Impact** - aiohttp now shows 19 confirmed vulnerabilities (3+16) instead of 35 (16+19)
+
+### 📊 FORMAT EXAMPLES
+```
+Heavy Filtering:
+BEFORE: "From Raw URL: 51 total - Manual review required - 20 CVEs found"
+AFTER:  "From Raw URL: 51 total, 20 Python-relevant - Manual review required - 20 CVEs found"
+
+No Filtering:
+"From Raw URL: 19 total - VULNERABLE - 16 SNYK vulnerabilities affect v3.8.3"
+
+Complete Filtering:
+"From Raw URL: 15 total, 0 Python-relevant - None found"
+```
+
+### 🔧 TECHNICAL IMPROVEMENTS
+- **Smart Count Extraction**: Uses actual vulnerable counts for security recommendations
+- **Enhanced Pattern Matching**: Regex patterns to extract correct counts from vulnerability summaries
+- **Result-Type Awareness**: Different extraction logic based on VULNERABLE/MANUAL_REVIEW/SAFE status
+- **Fallback Logic**: Robust extraction with multiple fallback mechanisms
+
+### ✅ VALIDATION VERIFIED
+```
+Enhanced Format Testing:
+- arrow: "51 total, 20 Python-relevant" (31 false positives filtered)
+- aiohttp: Mixed filtering across databases shown clearly
+- Recommendation counts: Now accurate (19 instead of 35)
+
+Count Extraction Testing:
+- VULNERABLE: Extracts actual vulnerable counts ✅
+- MANUAL REVIEW: Extracts Python-relevant counts ✅  
+- SAFE: Extracts Python-relevant counts ✅
+```
+
 ## [3.1.1] - 2025-07-31 - CRITICAL FIXES & ENHANCEMENTS 🛠️
 
 ### 🚨 CRITICAL BUG FIXES
